@@ -1,0 +1,9 @@
+
+syntax: regexp
+^src/Automarking\.egg-info$
+syntax: regexp
+^\.settings$
+syntax: regexp
+^\.project$
+syntax: regexp
+^\.pydevproject$
