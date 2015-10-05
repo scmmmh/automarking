@@ -8,7 +8,7 @@ NEWS = open(os.path.join(here, 'NEWS.txt')).read()
 
 version = '0.1'
 
-requires = []
+requires = ['rarfile']
 
 
 setup(name='Automarking',
