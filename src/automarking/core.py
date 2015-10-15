@@ -110,7 +110,7 @@ class TarSubmission(Submission):
         for identifier, pattern, title in patterns:
             for filename in source_file.getnames():
                 if re.match(pattern, path.basename(filename)):
-                    self.files.append(SubmissionFile(identifier, pattern, title, source_file.extractfile(filename)))
+                    self.files.append(SubmissionFile(identifier, pattern, title, source_file.extractfile(filename), path.basename(filename)))
 
 
 class ZipSubmission(Submission):
@@ -122,7 +122,7 @@ class ZipSubmission(Submission):
         for identifier, pattern, title in patterns:
             for filename in source_file.namelist():
                 if re.match(pattern, path.basename(filename)):
-                    self.files.append(SubmissionFile(identifier, pattern, title, source_file.open(filename)))
+                    self.files.append(SubmissionFile(identifier, pattern, title, source_file.open(filename), path.basename(filename)))
 
 
 class RarSubmission(Submission):
@@ -135,18 +135,19 @@ class RarSubmission(Submission):
             for filename in source_file.namelist():
                 filename = filename.replace('\\', '/')
                 if re.match(pattern, path.basename(filename)):
-                    self.files.append(SubmissionFile(identifier, pattern, title, source_file.open(filename)))
+                    self.files.append(SubmissionFile(identifier, pattern, title, source_file.open(filename), path.basename(filename)))
 
 
 class SubmissionFile(object):
     
-    def __init__(self, identifier, pattern, title, source):
+    def __init__(self, identifier, pattern, title, source, filename):
         self.identifier = identifier
         self.pattern = pattern
         self.title = title
         self.source = source
         self.score = 0
         self.feedback = []
+        self.filename = filename
         
     def __enter__(self):
         return self.source
