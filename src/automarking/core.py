@@ -134,7 +134,6 @@ class RarSubmission(Submission):
         for identifier, pattern, title in patterns:
             for filename in source_file.namelist():
                 filename = filename.replace('\\', '/')
-                print(path.basename(filename))
                 if re.match(pattern, path.basename(filename)):
                     self.files.append(SubmissionFile(identifier, pattern, title, source_file.open(filename)))
 
