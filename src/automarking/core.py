@@ -8,8 +8,8 @@ import tarfile
 
 from csv import DictReader, DictWriter
 from os import path
-from rarfile import RarFile
-from zipfile import ZipFile
+from rarfile import RarFile, BadRarFile
+from zipfile import ZipFile, BadZipFile
 
 STUDENTNR = re.compile(r'[0-9]{8,9}')
 
@@ -105,37 +105,43 @@ class TarSubmission(Submission):
     
     def __init__(self, studentnr, patterns, source_filename):
         Submission.__init__(self, studentnr)
-        source_file = tarfile.open(source_filename)
-        self.files = []
-        for identifier, pattern, title in patterns:
-            for filename in source_file.getnames():
-                if re.match(pattern, path.basename(filename)):
-                    self.files.append(SubmissionFile(identifier, pattern, title, source_file.extractfile(filename), path.basename(filename)))
+        try:
+            source_file = tarfile.open(source_filename)
+            for identifier, pattern, title in patterns:
+                for filename in source_file.getnames():
+                    if re.match(pattern, path.basename(filename)):
+                        self.files.append(SubmissionFile(identifier, pattern, title, source_file.extractfile(filename), path.basename(filename)))
+        except tarfile.TarError:
+            pass
 
 
 class ZipSubmission(Submission):
 
     def __init__(self, studentnr, patterns, source_filename):
         Submission.__init__(self, studentnr)
-        source_file = ZipFile(source_filename)
-        self.files = []
-        for identifier, pattern, title in patterns:
-            for filename in source_file.namelist():
-                if re.match(pattern, path.basename(filename)):
-                    self.files.append(SubmissionFile(identifier, pattern, title, source_file.open(filename), path.basename(filename)))
+        try:
+            source_file = ZipFile(source_filename)
+            for identifier, pattern, title in patterns:
+                for filename in source_file.namelist():
+                    if re.match(pattern, path.basename(filename)):
+                        self.files.append(SubmissionFile(identifier, pattern, title, source_file.open(filename), path.basename(filename)))
+        except BadZipFile:
+            pass
 
 
 class RarSubmission(Submission):
 
     def __init__(self, studentnr, patterns, source_filename):
         Submission.__init__(self, studentnr)
-        source_file = RarFile(source_filename)
-        self.files = []
-        for identifier, pattern, title in patterns:
-            for filename in source_file.namelist():
-                filename = filename.replace('\\', '/')
-                if re.match(pattern, path.basename(filename)):
-                    self.files.append(SubmissionFile(identifier, pattern, title, source_file.open(filename), path.basename(filename)))
+        try:
+            source_file = RarFile(source_filename)
+            for identifier, pattern, title in patterns:
+                for filename in source_file.namelist():
+                    filename = filename.replace('\\', '/')
+                    if re.match(pattern, path.basename(filename)):
+                        self.files.append(SubmissionFile(identifier, pattern, title, source_file.open(filename), path.basename(filename)))
+        except BadRarFile:
+            pass
 
 
 class SubmissionFile(object):
