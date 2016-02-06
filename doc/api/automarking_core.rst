@@ -1,0 +1,2 @@
+.. automodule:: automarking.core
+  :members:

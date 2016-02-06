@@ -67,7 +67,8 @@ class SubmissionSpec(object):
 
 
 class BlackboardDataSource(object):
-    
+    """The :class:`~automarking.core.BlackboardDataSource`."""
+
     def __init__(self, gradebook, gradecolumn, specs):
         self.gradebook_filename = gradebook
         self.gradecolumn_filename = gradecolumn

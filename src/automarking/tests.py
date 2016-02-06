@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """
+#####################################################
+:mod:`automarking.tests` -- Automated Testing Support
+#####################################################
 
 .. moduleauthor:: Mark Hall <mark.hall@work.room3b.eu>
 """
