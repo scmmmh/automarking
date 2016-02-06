@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-u"""
+"""
 
-.. moduleauthor:: Mark Hall <mark.hall@mail.room3b.eu>
+.. moduleauthor:: Mark Hall <mark.hall@work.room3b.eu>
 """
 from subprocess import Popen, PIPE, TimeoutExpired
 
