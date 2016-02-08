@@ -6,7 +6,7 @@
 
 The main classes are the :class:`~automarking.core.SubmissionSpec`, used for
 specifying the files to extract, and the :class:`~automarking.core.BlackboardDataSource`
-that is the main entry point into the automarking functionality.
+that loads data from the files downloaded from by Blackboard. 
 
 .. moduleauthor:: Mark Hall <mark.hall@work.room3b.eu>
 """
@@ -14,7 +14,7 @@ import re
 import tarfile
 
 from csv import DictReader, DictWriter
-from os import path
+from io import BytesIO
 from rarfile import RarFile, BadRarFile
 from zipfile import ZipFile, BadZipFile
 
@@ -32,14 +32,11 @@ class SubmissionSpec(object):
         :param title: Title of the submission, which will be used to label feedback
                       in the mark / feedback output
         :type title: ``unicode``
-        :param pattern: The pattern to apply to the path. If a single ``unicode`` is
-                        passed, then the regexp is applied only to the
-                        ``os.path.basename`` of the submission filename. If a ``list``
-                        is passed, then the filename is split at the path separator
-                        and then each element of the pattern is applied to each element
-                        of the filename and only if all elements match does the
-                        :class:`~core.automarking.SubmissionSpec` match
-        :type pattern: Either a ``unicode`` regexp or a ``list`` of ``unicode`` regexps
+        :param pattern: The regular expression pattern to apply to the filename. Can
+                        either be a single regular expression or a ``list`` of
+                        regular expressions, in which case at least one of those
+                        must match.
+        :type pattern: RegExp or ``list`` of RegExp
         """
         self.identifier = identifier
         self.title = title
@@ -55,26 +52,24 @@ class SubmissionSpec(object):
         :rtype: ``boolean``
         """
         if isinstance(self.pattern, list):
-            filename = filename.split('/')
-            if len(filename) == len(self.pattern):
-                for filepart, pattern in zip(filename, self.pattern):
-                    if not re.search(pattern, filepart):
-                        return False
-                return True
+            for pattern in self.pattern:
+                if re.search(pattern, filename):
+                    return True
+            return False
         else:
-            return re.search(self.pattern, path.basename(filename))
-        return False
+            return re.search(self.pattern, filename)
 
 
 class BlackboardDataSource(object):
     """The :class:`~automarking.core.BlackboardDataSource` handles loading the
     student submissions from a Blackboard download for offline marking."""
 
-    def __init__(self, gradebook, gradecolumn, specs):
+    def __init__(self, gradebook, gradecolumn, specs, options=None):
         self.gradebook_filename = gradebook
         self.gradecolumn_filename = gradecolumn
         self.specs = specs
-    
+        self.options = options if options is not None else {}
+
     def __enter__(self):
         studentlist = []
         with open(self.gradecolumn_filename, encoding='utf-8-sig') as in_f:
@@ -83,32 +78,39 @@ class BlackboardDataSource(object):
                 studentlist.append(line['Student ID'])
         submissions = []
         with ZipFile(self.gradebook_filename) as in_f:
-            for filename in in_f.namelist():
-                match = re.search(STUDENTNR, filename)
-                if match and match.group(0) in studentlist:
-                    target_filename = 'tmp/%s%s' % (match.group(0), filename[filename.find('.'):])
-                    if filename.lower().endswith('.tar.bz2') or filename.endswith('.tar.gz'):
-                        with in_f.open(filename) as submission_file:
-                            with open(target_filename, 'wb') as out_f:
-                                out_f.write(submission_file.read())
-                        submissions.append(TarSubmission(match.group(0), self.specs, target_filename))
-                    elif filename.lower().endswith('.zip'):
-                        with in_f.open(filename) as submission_file:
-                            with open(target_filename, 'wb') as out_f:
-                                out_f.write(submission_file.read())
-                        submissions.append(ZipSubmission(match.group(0), self.specs, target_filename))
-                    elif filename.lower().endswith('.rar'):
-                        with in_f.open(filename) as submission_file:
-                            with open(target_filename, 'wb') as out_f:
-                                out_f.write(submission_file.read())
-                        submissions.append(RarSubmission(match.group(0), self.specs, target_filename))
-                    elif filename.endswith('.txt'):
-                        pass
-                    else:
-                        print('Unknown submission: %s' % filename)
+            for studentnr in studentlist:
+                submitted = False
+                for filename in in_f.namelist():
+                    if studentnr in filename:
+                        target_filename = 'tmp/%s%s' % (studentnr, filename[filename.find('.'):])
+                        if filename.lower().endswith('.tar.bz2') or filename.endswith('.tar.gz'):
+                            with in_f.open(filename) as submission_file:
+                                with open(target_filename, 'wb') as out_f:
+                                    out_f.write(submission_file.read())
+                            submissions.append(TarSubmission(studentnr, self.specs, target_filename))
+                            submitted = True
+                        elif filename.lower().endswith('.zip'):
+                            with in_f.open(filename) as submission_file:
+                                with open(target_filename, 'wb') as out_f:
+                                    out_f.write(submission_file.read())
+                            submissions.append(ZipSubmission(studentnr, self.specs, target_filename))
+                            submitted = True
+                        elif filename.lower().endswith('.rar'):
+                            with in_f.open(filename) as submission_file:
+                                with open(target_filename, 'wb') as out_f:
+                                    out_f.write(submission_file.read())
+                            submissions.append(RarSubmission(studentnr, self.specs, target_filename))
+                            submitted = True
+                        elif filename.endswith('.txt'):
+                            pass
+                        else:
+                            submissions.append(MissingSubmission(studentnr, self.specs, message='Unknown submission type %s' % filename[filename.rfind('.'):]))
+                            submitted = True
+                if not submitted:
+                    submissions.append(MissingSubmission(studentnr, self.specs, message=self.options['no_submission_message'] if 'no_submission_message' in self.options else 'No submission'))
         self.submissions = submissions
         return self.submissions
-    
+
     def __exit__(self, type_, value, traceback):
         submissions = {}
         for submission in self.submissions:
@@ -138,33 +140,42 @@ class BlackboardDataSource(object):
 
 
 class Submission(object):
-    
+
     def __init__(self, studentnr):
         self.studentnr = studentnr
         self.score = 0
-        self.files = []
+        self.parts = []
         self.feedback = []
 
     def __enter__(self):
-        return self.files
+        return self.parts
 
     def __exit__(self, type_, value, traceback):
         self.score = 0
-        for submission_file in self.files:
-            self.score = self.score + submission_file.score
-            self.feedback.extend(submission_file.feedback)
+        for part in self.parts:
+            self.score = self.score + part.score
+            self.feedback.extend(part.feedback)
+
+
+class MissingSubmission(Submission):
+
+    def __init__(self, studentnr, specs, message):
+        Submission.__init__(self, studentnr)
+        self.feedback.append(message)
 
 
 class TarSubmission(Submission):
-    
+
     def __init__(self, studentnr, specs, source_filename):
         Submission.__init__(self, studentnr)
         try:
             source_file = tarfile.open(source_filename)
             for spec in specs:
+                part = SubmissionPart(spec)
+                self.parts.append(part)
                 for filename in source_file.getnames():
                     if spec.matches(filename):
-                        self.files.append(SubmissionFile(spec, source_file.extractfile(filename), path.basename(filename)))
+                        part.add_data(filename, source_file.extractfile(filename).read())
         except tarfile.TarError:
             pass
 
@@ -176,9 +187,11 @@ class ZipSubmission(Submission):
         try:
             source_file = ZipFile(source_filename)
             for spec in specs:
+                part = SubmissionPart(spec)
+                self.parts.append(part)
                 for filename in source_file.namelist():
                     if spec.matches(filename):
-                        self.files.append(SubmissionFile(spec, source_file.open(filename), path.basename(filename)))
+                        part.add_data(filename, source_file.open(filename).read())
         except BadZipFile:
             pass
 
@@ -190,26 +203,35 @@ class RarSubmission(Submission):
         try:
             source_file = RarFile(source_filename)
             for spec in specs:
+                part = SubmissionPart(spec)
+                self.parts.append(part)
                 for filename in source_file.namelist():
                     filename = filename.replace('\\', '/')
                     if spec.matches(filename):
-                        self.files.append(SubmissionFile(spec, source_file.open(filename), path.basename(filename)))
+                        part.add_data(filename, source_file.open(filename).read())
         except BadRarFile:
             pass
 
 
-class SubmissionFile(object):
-    
-    def __init__(self, spec, source, filename):
+class SubmissionPart(object):
+
+    def __init__(self, spec):
         self.spec = spec
-        self.source = source
+        self.data = None
         self.score = 0
         self.feedback = []
-        self.filename = filename
-        
+
+    def add_data(self, filename, data):
+        if self.data is None:
+            self.data = (filename, BytesIO(data))
+        elif isinstance(self.data, tuple):
+            self.data = [self.data, (filename, BytesIO(data))]
+        else:
+            self.data.append((filename, BytesIO(data)))
+
     def __enter__(self):
-        return self.source
-    
+        return self.data
+
     def __exit__(self, type_, value, traceback):
         self.feedback.insert(0, '#' * len(self.spec.title))
         self.feedback.insert(0, self.spec.title)
