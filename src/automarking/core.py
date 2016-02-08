@@ -52,7 +52,7 @@ class SubmissionSpec(object):
         :param filename: The filename to check
         :type filename: ``unicode``
         :return: ``True`` if the ``filename`` is matched, ``False`` otherwise
-        :return_type: ``boolean``
+        :rtype: ``boolean``
         """
         if isinstance(self.pattern, list):
             filename = filename.split('/')
@@ -67,7 +67,8 @@ class SubmissionSpec(object):
 
 
 class BlackboardDataSource(object):
-    """The :class:`~automarking.core.BlackboardDataSource`."""
+    """The :class:`~automarking.core.BlackboardDataSource` handles loading the
+    student submissions from a Blackboard download for offline marking."""
 
     def __init__(self, gradebook, gradecolumn, specs):
         self.gradebook_filename = gradebook
