@@ -3,13 +3,19 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Automarking's documentation!
-=======================================
+###########
+Automarking
+###########
 
-Contents:
+The Automarking library provides functionality for automatically assessing student
+work. It currently supports Blackboard as a data-source, but other VLE platforms
+can be added.
+
+Contents
+========
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    
    api/index
 
