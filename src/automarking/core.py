@@ -10,6 +10,7 @@ that loads data from the files downloaded from by Blackboard.
 
 .. moduleauthor:: Mark Hall <mark.hall@work.room3b.eu>
 """
+import os
 import re
 import tarfile
 
@@ -77,6 +78,14 @@ class BlackboardDataSource(object):
         self.options = options if options is not None else {}
 
     def __enter__(self):
+        if os.path.isdir('tmp'):
+            for root, dirs, files in os.walk('tmp', topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+        else:
+            os.mkdir('tmp')
         studentlist = []
         with open(self.gradecolumn_filename, encoding='utf-8-sig') as in_f:
             reader = DictReader(in_f)
