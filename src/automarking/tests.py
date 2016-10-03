@@ -6,13 +6,17 @@
 
 .. moduleauthor:: Mark Hall <mark.hall@work.room3b.eu>
 """
+from io import StringIO, BytesIO
 from subprocess import Popen, PIPE, TimeoutExpired
+
 
 def extract_code(source, start_identifier='// StartStudentCode', end_identifier='// EndStudentCode'):
     pre = []
     code = []
     post = []
     state = 0
+    if isinstance(source, BytesIO):
+        source = StringIO(source.read().decode('utf-8'))
     for line in source:
         if state == 0 and line.strip() == start_identifier:
             state = 1
@@ -26,11 +30,13 @@ def extract_code(source, start_identifier='// StartStudentCode', end_identifier=
             post.append(line)
     return ('\n'.join(pre), '\n'.join(code), '\n'.join(post))
 
+
 def merge_code(base, overlay, start_identifier='// StartStudentCode', end_identifier='// EndStudentCode'):
     pre, _, post = extract_code(base, start_identifier, end_identifier)
     _, code, _ = extract_code(overlay, start_identifier, end_identifier)
     return '\n'.join([pre, code, post])
-    
+
+
 def run_test(command, parameters, submission_file):
     with Popen([command] + parameters, stdout=PIPE, stderr=PIPE) as process:
         try:
