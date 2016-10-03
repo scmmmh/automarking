@@ -26,9 +26,7 @@ class SubmissionSpec(object):
     to specify which files to extract from each student's submission.""" 
 
     def __init__(self, identifier, title, pattern):
-        """Create a new :class:`~core.automarking.SubmissionSpec`.
-
-        :param identifier: Identifier to use
+        """:param identifier: Identifier to use
         :param title: Title of the submission, which will be used to label feedback
                       in the mark / feedback output
         :type title: ``unicode``
@@ -65,6 +63,14 @@ class BlackboardDataSource(object):
     student submissions from a Blackboard download for offline marking."""
 
     def __init__(self, gradebook, gradecolumn, specs, options=None):
+        """:param gradebook:
+        :type gradebook:
+        :param gradecolumn:
+        :type gradecolumn:
+        :param specs:
+        :type specs: :py:class:`list`
+        :param options:
+        :type options:"""
         self.gradebook_filename = gradebook
         self.gradecolumn_filename = gradecolumn
         self.specs = specs
