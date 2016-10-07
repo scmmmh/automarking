@@ -29,4 +29,8 @@ def mark(source):
             with submission as parts:
                 for part in parts:
                     with part as data:
-                        yield (part, data)
+                        if isinstance(data, list):
+                            for sub_data in data:
+                                yield (part, sub_data)
+                        else:
+                            yield (part, data)
