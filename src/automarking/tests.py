@@ -16,7 +16,17 @@ def extract_code(source, start_identifier='// StartStudentCode', end_identifier=
     post = []
     state = 0
     if isinstance(source, BytesIO):
-        source = StringIO(source.read().decode('utf-8'))
+        try:
+            source = StringIO(source.read().decode('utf-8'))
+        except UnicodeDecodeError:
+            try:
+                source = StringIO(source.read().decode('latin-1'))
+            except UnicodeDecodeError:
+                try:
+                     source = StringIO(source.read().decode('ascii'))
+                except UnicodeDecodeError:
+                    print('Could not decode file')
+                    sourced = StringIO('')
     for line in source:
         if state == 0 and line.strip() == start_identifier:
             state = 1
