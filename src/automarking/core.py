@@ -16,7 +16,7 @@ import tarfile
 
 from csv import DictReader, DictWriter
 from io import BytesIO
-from rarfile import RarFile, BadRarFile
+from rarfile import RarFile, BadRarFile, NotRarFile
 from zipfile import ZipFile, BadZipFile
 
 STUDENTNR = re.compile(r'[0-9]{8,9}')
@@ -225,6 +225,8 @@ class RarSubmission(Submission):
                     if spec.matches(filename):
                         part.add_data(filename, source_file.open(filename).read())
         except BadRarFile:
+            pass
+        except NotRarFile:
             pass
 
 
