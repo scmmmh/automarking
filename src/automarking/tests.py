@@ -47,10 +47,10 @@ def merge_code(base, overlay, start_identifier='// StartStudentCode', end_identi
     return '\n'.join([pre, code, post])
 
 
-def run_test(command, parameters, submission_file):
+def run_test(command, parameters, submission_file, timeout=60):
     with Popen([command] + parameters, stdout=PIPE, stderr=PIPE) as process:
         try:
-            stdout, stderr = process.communicate(timeout=60)
+            stdout, stderr = process.communicate(timeout=timeout)
             stdout = stdout.decode('utf-8')
             stderr = stderr.decode('utf-8')
         except TimeoutExpired:
