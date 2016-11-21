@@ -54,6 +54,7 @@ def run_test(command, parameters, submission_file, timeout=60):
             stdout = stdout.decode('utf-8')
             stderr = stderr.decode('utf-8')
         except TimeoutExpired:
+            process.kill()
             stdout = None
             stderr = 'Test failed due to timeout'
         if process.returncode == 0:
