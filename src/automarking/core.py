@@ -6,7 +6,7 @@
 
 The main classes are the :class:`~automarking.core.SubmissionSpec`, used for
 specifying the files to extract, and the :class:`~automarking.core.BlackboardDataSource`
-that loads data from the files downloaded from by Blackboard. 
+that loads data from the files downloaded from by Blackboard.
 
 .. moduleauthor:: Mark Hall <mark.hall@work.room3b.eu>
 """
@@ -24,7 +24,7 @@ STUDENTNR = re.compile(r'[0-9]{8,9}')
 
 class SubmissionSpec(object):
     """The :class:`~core.automarking.SubmissionSpec` is used in the user scripts
-    to specify which files to extract from each student's submission.""" 
+    to specify which files to extract from each student's submission."""
 
     def __init__(self, identifier, title, pattern):
         """:param identifier: Identifier to use
@@ -222,7 +222,8 @@ class RarSubmission(Submission):
                 self.parts.append(part)
                 for filename in source_file.namelist():
                     filename = filename.replace('\\', '/')
-                    if spec.matches(filename):
+                    info = source_file.getinfo(filename)
+                    if not info.isdir() and spec.matches(filename):
                         part.add_data(filename, source_file.open(filename).read())
         except BadRarFile:
             pass
